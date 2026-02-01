@@ -1,3 +1,5 @@
 streamlit
-PyPDF2
-python-docx
+gradio
+g4f
+nest_asyncio
+requests
