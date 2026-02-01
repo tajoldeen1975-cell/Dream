@@ -1,5 +1,4 @@
 streamlit
-gradio
 g4f
 nest_asyncio
 requests
