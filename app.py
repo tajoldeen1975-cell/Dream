@@ -1,6 +1,4 @@
-﻿import streamlit as st
-import os
-import gradio as gr
+import streamlit as st
 import g4f
 import nest_asyncio
 import requests
@@ -8,30 +6,61 @@ import requests
 # تطبيق إصلاح مشاكل التزامن
 nest_asyncio.apply()
 
-# --- إعداد الأيقونة ---
-def get_icon_path():
-    try:
-        icon_url = "https://cdn-icons-png.flaticon.com/512/4358/4358767.png"
-        response = requests.get(icon_url, timeout=2)
-        if response.status_code == 200:
-            with open("icon.png", "wb") as f:
-                f.write(response.content)
-            return "icon.png"
-    except:
-        pass
-    return None
+# إعدادات الصفحة
+st.set_page_config(
+    page_title="مفسر الأحلام الشامل",
+    page_icon="🕌",
+    layout="centered"
+)
 
-app_icon = get_icon_path()
-
-# --- دالة التفسير السريعة ---
-def interpret_dream(scholar_choice, dream_text):
-    if not dream_text.strip():
-        return "يرجى كتابة تفاصيل الحلم أولاً."
+# --- تنسيق CSS مخصص للمظهر العربي ---
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Amiri&family=Tajawal:wght@400;700&display=swap');
     
-    if not scholar_choice:
-        return "يرجى اختيار المنهج أولاً."
+    html, body, [class*="css"] {
+        font-family: 'Tajawal', sans-serif;
+        direction: rtl;
+        text-align: right;
+    }
+    
+    .main-title {
+        color: #1abc9c;
+        text-align: center;
+        font-family: 'Amiri', serif;
+        font-size: 3rem;
+        margin-bottom: 0px;
+    }
+    
+    .subtitle {
+        text-align: center;
+        color: #7f8c8d;
+        font-size: 1.2rem;
+        margin-bottom: 30px;
+    }
 
-    # إعداد الموجه (Prompt)
+    .stTextArea textarea {
+        direction: rtl;
+        text-align: right;
+        font-size: 1.1rem;
+        border: 2px solid #1abc9c !important;
+    }
+    
+    .interpretation-box {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 15px;
+        border-right: 8px solid #1abc9c;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        line-height: 1.8;
+        font-size: 1.2rem;
+        color: #2c3e50;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- دالة التفسير ---
+def interpret_dream(scholar_choice, dream_text):
     base_instruction = "أنت خبير تفسير أحلام، لغتك عربية فصحى رصينة، تبدأ ببسم الله وتختم بـ 'والله تعالى أعلم'."
 
     if scholar_choice == "الإمام الصادق (ع)":
@@ -47,11 +76,8 @@ def interpret_dream(scholar_choice, dream_text):
 
     prompt = f"{base_instruction}\n{specific_instruction}\nالحلم: '{dream_text}'\nالمطلوب: تفسير دقيق وشامل."
 
-    # --- محاولة الاتصال السريع (Fast Providers) ---
-    # هنا التغيير الجذري: نحدد مزودين سريعين بدلاً من البحث العشوائي
-    
     try:
-        # المحاولة الأولى: استخدام Blackbox (سريع جداً ومجاني)
+        # المحاولة الأولى: Blackbox
         response = g4f.ChatCompletion.create(
             model="gpt-4o",
             provider=g4f.Provider.Blackbox,
@@ -62,7 +88,7 @@ def interpret_dream(scholar_choice, dream_text):
         pass
 
     try:
-        # المحاولة الثانية: استخدام PollinationsAI (سريع جداً)
+        # المحاولة الثانية: PollinationsAI
         response = g4f.ChatCompletion.create(
             model="gpt-4o",
             provider=g4f.Provider.PollinationsAI,
@@ -73,51 +99,39 @@ def interpret_dream(scholar_choice, dream_text):
         pass
 
     try:
-        # المحاولة الثالثة: الوضع التلقائي (أبطأ قليلاً لكنه مضمون)
+        # الوضع التلقائي
         response = g4f.ChatCompletion.create(
             model=g4f.models.default,
             messages=[{"role": "user", "content": prompt}],
         )
         return response
     except Exception as e:
-        return f"⚠️ عذراً، حدث ضغط على الخوادم المجانية. يرجى المحاولة مرة أخرى.\n(الخطأ: {str(e)})"
+        return f"⚠️ عذراً، الخوادم مشغولة حالياً. يرجى المحاولة بعد لحظات.\n(الخطأ: {str(e)})"
 
-# --- التصميم والواجهة ---
-custom_css = """
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+# --- واجهة التطبيق ---
+st.markdown('<h1 class="main-title">🕌 موسوعة تفسير الأحلام</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">تفسير بالذكاء الاصطناعي مستند إلى أمهات الكتب</p>', unsafe_allow_html=True)
 
-body { font-family: 'Amiri', serif !important; background-color: #f4f6f7; }
-.gradio-container { font-family: 'Amiri', serif !important; }
-h1 { text-align: center; color: #1abc9c; font-family: 'Tajawal', sans-serif; font-size: 2.5em; }
-.subtitle { text-align: center; color: #7f8c8d; margin-bottom: 20px; }
-.scholar-radio { background: white; padding: 15px; border-radius: 10px; }
-#dream_input textarea { direction: rtl; text-align: right; font-size: 18px; border: 2px solid #1abc9c; }
-#output_box { direction: rtl; text-align: right; font-size: 18px; background-color: white; padding: 25px; border-radius: 12px; border-right: 5px solid #16a085; line-height: 1.8; }
-"""
+# تقسيم الشاشة لمدخلات منظمة
+col1, col2 = st.columns([1, 1])
 
-with gr.Blocks(css=custom_css, theme=gr.themes.Soft(primary_hue="teal"), title="مفسر الأحلام الشامل") as demo:
-    
-    gr.Markdown("# 🕌 موسوعة تفسير الأحلام الكبرى")
-    gr.Markdown("<div class='subtitle'>تفسير دقيق بالذكاء الاصطناعي استناداً لأمهات الكتب</div>")
-    
-    with gr.Row():
-        with gr.Column(scale=4):
-            scholar_radio = gr.Radio(
-                choices=["التفسير الشامل (الأمثل)", "الإمام الصادق (ع)", "ابن سيرين", "النابلسي", "ابن شاهين"], 
-                value="التفسير الشامل (الأمثل)", 
-                label="اختر منهج التفسير",
-                elem_classes="scholar-radio"
-            )
-            input_text = gr.Textbox(lines=5, label="تفاصيل الرؤيا", placeholder="اكتب حلمك هنا...", elem_id="dream_input")
-            submit_btn = gr.Button("تفسير الرؤيا ✨", variant="primary", size="lg")
-        
-        with gr.Column(scale=5):
-            output_text = gr.Markdown(label="التفسير والتحليل", elem_id="output_box")
+with col1:
+    scholar = st.selectbox(
+        "اختر منهج التفسير:",
+        ["التفسير الشامل (الأمثل)", "الإمام الصادق (ع)", "ابن سيرين", "النابلسي", "ابن شاهين"]
+    )
 
-    submit_btn.click(fn=interpret_dream, inputs=[scholar_radio, input_text], outputs=output_text)
+input_dream = st.text_area("صف حلمك بالتفصيل:", placeholder="مثلاً: رأيت أنني أمشي في بستان أخضر...", height=150)
 
-if app_icon:
-    demo.launch(favicon_path=app_icon)
-else:
-    demo.launch()
+if st.button("تفسير الرؤيا ✨", use_container_width=True):
+    if not input_dream.strip():
+        st.error("الرجاء كتابة الحلم أولاً")
+    else:
+        with st.spinner('جاري تحليل الرموز والبحث في المصادر...'):
+            result = interpret_dream(scholar, input_dream)
+            st.markdown("### نتيجة التفسير:")
+            st.markdown(f'<div class="interpretation-box">{result}</div>', unsafe_allow_html=True)
+
+# تذييل الصفحة
+st.markdown("---")
+st.markdown("<p style='text-align: center; color: #95a5a6;'>تم التطوير باستخدام الذاء الاصطناعي - 2024</p>", unsafe_allow_html=True)
